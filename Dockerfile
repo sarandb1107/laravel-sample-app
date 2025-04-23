@@ -1,38 +1,34 @@
-# Use an official PHP image with Apache
+# Use official PHP image with Apache
 FROM php:8.1-apache
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/www
 
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
-    libzip-dev \
     zip \
+    libzip-dev \
     && docker-php-ext-install zip pdo pdo_mysql
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Update Apache to use Laravel's public folder as the web root
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/public|' /etc/apache2/sites-available/000-default.conf
 
-# Copy app files to container
-COPY . .
+# Copy app code to container
+COPY . /var/www
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 755 /var/www/storage
 
-# Expose port 80
-EXPOSE 80
+# Install Composer globally
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Run Laravel setup commands
+# Install PHP dependencies and optimize Laravel
 RUN composer install --no-dev --optimize-autoloader \
-    && cp .env.example .env \
-    && php artisan key:generate \
-    && php artisan config:cache
+    && cp .env.example .env
 
-# Start Apache
-CMD ["apache2-foreground"]
