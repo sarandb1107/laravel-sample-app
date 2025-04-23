@@ -1,2 +1,2 @@
-# laravel-k8s-demo
+# laravel-sample-app
 Sampe Application 
